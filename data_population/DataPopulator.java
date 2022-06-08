@@ -19,7 +19,7 @@ public class DataPopulator {
 
     public static void main(String[] args) throws FileNotFoundException {
         // Script text
-        String script = "";
+        String script = "delete from items;\nalter sequence items_id_seq restart with 1\n";
 
         // Scan items CSV
         Scanner sc = new Scanner(new File(args[0]));

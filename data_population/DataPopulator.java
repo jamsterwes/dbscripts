@@ -8,7 +8,8 @@ public class DataPopulator {
         String displayName = sc.next();
         Double unitPrice = sc.nextDouble();
         boolean byWeight = sc.nextInt() == 1;
-        
+        sc.close();
+
         String script = "";
         script += "INSERT INTO items (display_name, unit_price, by_weight) VALUES (";
         script += "'" + displayName + "', ";

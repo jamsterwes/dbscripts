@@ -23,5 +23,5 @@ for day in range(1, 30):
         last_receipt_id += 1
         for l in range(random.randrange(1, 5)):
             script += "INSERT INTO receipt_lines VALUES ({}, {}, {:0.3f});\n".format(this_receipt_id, random.choice(items), random.random() * 25)
-        script += "INSERT INTO receipts (id, transaction_date, total) VALUES ({}, '2022-{:02d}-{:02d}', {:0.2f});\n".format(this_receipt_id, month, day, random.random() * 100)
+        script += "INSERT INTO receipts (id, transaction_date, total, is_cash) VALUES ({}, '2022-{:02d}-{:02d}', {:0.2f}, {});\n".format(this_receipt_id, month, day, random.random() * 100, random.choice(["true", "false"]))
 print(script)

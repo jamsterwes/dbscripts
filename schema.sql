@@ -24,7 +24,7 @@ CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
     cost NUMERIC(10, 2) NOT NULL CHECK (cost >= 0),
     delivery_date TIMESTAMP NOT NULL,
-    received BOOLEAN DEFAULT 0
+    received BOOLEAN DEFAULT false
 );
 
 CREATE TABLE order_lines (
@@ -36,5 +36,5 @@ CREATE TABLE order_lines (
 CREATE TABLE employees (
     id SERIAL PRIMARY KEY,
     employee_name TEXT NOT NULL,
-    is_admin BOOLEAN DEFAULT 0
-)
+    is_admin BOOLEAN DEFAULT false
+);

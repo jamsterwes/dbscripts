@@ -61,7 +61,7 @@ public class ReceiptPopulator {
                 return;
             }
 
-            cost += newAmount * inventory.get(ID).unitPrice;
+            cost += 0.5 * newAmount * inventory.get(ID).unitPrice;
 
             itemStock.put(ID, newAmount);
         }
@@ -73,6 +73,8 @@ public class ReceiptPopulator {
         }
 
         public String toSQL() {
+            if (itemStock.size() == 0) return "";
+
             String commands = "";
             for (Integer ID : itemStock.keySet()) {
                 String lineSQL = String.format(LINE_FMT, orderID, ID, itemStock.get(ID));
@@ -117,6 +119,8 @@ public class ReceiptPopulator {
         }
 
         public String toSQL() {
+            if (itemStock.size() == 0) return "";
+
             String commands = "";
             for (Integer ID : itemStock.keySet()) {
                 String lineSQL = String.format(LINE_FMT, receiptID, ID, itemStock.get(ID));

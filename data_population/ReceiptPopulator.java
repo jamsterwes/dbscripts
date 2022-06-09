@@ -10,7 +10,7 @@ public class ReceiptPopulator {
         public double unitPrice;
         public double quantity;
 
-        private final String ITEM_FMT = "UPDATE items SET quantity = %.3f WHERE id = %d;\n"; 
+        private final String ITEM_FMT = "UPDATE items SET remaining_stock = %.3f WHERE id = %d;\n"; 
 
         public Item(int ID, boolean byWeight, String displayName, double unitPrice, double quantity) {
             this.ID = ID;
@@ -250,7 +250,7 @@ public class ReceiptPopulator {
         
         // Create random receipts
         for (int i = 0; i < 20; i++) {
-            Receipt receipt = new Receipt(1, 3, false, 2022, 6, 9);
+            Receipt receipt = new Receipt(i, 3, false, 2022, 6, 9);
             receipt.fillRandom(rnd, inventory, 5);
 
             System.out.println(receipt.toSQL());

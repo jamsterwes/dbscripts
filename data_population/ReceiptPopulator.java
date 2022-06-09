@@ -16,7 +16,51 @@ public class ReceiptPopulator {
             this.unitPrice = unitPrice;
             this.quantity = quantity;
         }
+    }
 
+    static class Order {
+        public int orderID;
+        public double cost;
+        public HashMap<Integer, Double> itemStock;
+        public int year, month, day;
+
+        private final String LINE_FMT = "INSERT INTO order_lines VALUES (%d, %d, %0.3f);";
+        private final String ORDER_FMT = "INSERT INTO orders VALUES (%d, %0.2f, %04d-%02d-%02d, %s);";
+
+        public Order(int orderID, double cost, int year, int month, int day) {
+            this.orderID = orderID;
+            this.cost = cost;
+            this.itemStock = new HashMap<>();
+            this.year = year;
+            this.month = month;
+            this.day = day;
+        }
+
+        public boolean hasOrdered(int ID) {
+            return itemStock.containsKey(ID);
+        }
+
+        public void addItem(int ID, double newAmount, HashMap<Integer, Item> inventory) {
+            if (hasOrdered(ID)) {
+                return;
+            }
+
+            cost += newAmount * inventory.get(ID).unitPrice;
+
+            itemStock.put(ID, newAmount);
+        }
+
+        public String toSQL() {
+            String commands = "";
+            for(Integer ID: itemStock.keySet()){
+                String lineSQL = String.format(LINE_FMT, orderID, ID, itemStock.get(ID));
+                commands += lineSQL + "\n";
+            }
+
+            commands+= String.format(ORDER_FMT, orderID, cost, year, month, day, "true");
+
+            return commands;
+        }
     }
 
     private static Item readLine(String line) {
@@ -32,8 +76,8 @@ public class ReceiptPopulator {
         return tempItem;
     }
 
-    private static Hashtable<Integer, Item> readFromCSV(String fileName) throws FileNotFoundException {
-        Hashtable<Integer, Item> inventory = new Hashtable<Integer, Item>();
+    private static HashMap<Integer, Item> readFromCSV(String fileName) throws FileNotFoundException {
+        HashMap<Integer, Item> inventory = new HashMap<Integer, Item>();
 
         Scanner sc = new Scanner(new File(fileName));
         sc.useDelimiter("\n");
@@ -80,9 +124,9 @@ public class ReceiptPopulator {
         Random rnd = new Random();
         rnd.setSeed(seed);
 
-        Hashtable<Integer, Item> inventory = readFromCSV("items.csv");
+        HashMap<Integer, Item> inventory = readFromCSV("items.csv");
 
-        
+
 
     }
 }

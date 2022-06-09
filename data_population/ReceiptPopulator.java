@@ -233,15 +233,21 @@ public class ReceiptPopulator {
         Random rnd = new Random();
         rnd.setSeed(seed);
 
+        System.out.println("delete from receipts;");
+        System.out.println("delete from receipt_lines;");
+        System.out.println("delete from orders;");
+        System.out.println("delete from order_lines;");
+
         // Create inventory/employee reference
         HashMap<Integer, Item> inventory = readFromCSV("items.csv");
         HashMap<Integer, String> employees = readEmployees("employees.txt");
 
         int receipt_id = 1;
+        int order_id = 1;
 
         for (int day = 1; day < 22; day++) {
             // Create order
-            Order myOrder = new Order(1, 2022, 6, day);
+            Order myOrder = new Order(order_id++, 2022, 6, day);
             for (int i = 1; i < inventory.size() + 1; i++) {
                 if (inventory.get(i).quantity > 2.5) continue;
 

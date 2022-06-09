@@ -10,11 +10,17 @@ public class ReceiptPopulator {
         public double unitPrice;
         public double quantity;
 
+        private final String ITEM_FMT = "UPDATE items SET quantity = %.3f WHERE id = %d;"; 
+
         public Item(boolean isCash, String displayName, double unitPrice, double quantity) {
             this.byWeight = isCash;
             this.displayName = displayName;
             this.unitPrice = unitPrice;
             this.quantity = quantity;
+        }
+
+        public String toSQL() {
+            return String.format(ITEM_FMT, quantity)
         }
     }
 
@@ -24,12 +30,12 @@ public class ReceiptPopulator {
         public HashMap<Integer, Double> itemStock;
         public int year, month, day;
 
-        private final String LINE_FMT = "INSERT INTO order_lines VALUES (%d, %d, %0.3f);";
-        private final String ORDER_FMT = "INSERT INTO orders VALUES (%d, %0.2f, %04d-%02d-%02d, %s);";
+        private final String LINE_FMT = "INSERT INTO order_lines VALUES (%d, %d, %.3f);";
+        private final String ORDER_FMT = "INSERT INTO orders VALUES (%d, %.2f, '%04d-%02d-%02d', %s);";
 
-        public Order(int orderID, double cost, int year, int month, int day) {
+        public Order(int orderID, int year, int month, int day) {
             this.orderID = orderID;
-            this.cost = cost;
+            this.cost = 0;
             this.itemStock = new HashMap<>();
             this.year = year;
             this.month = month;
@@ -50,14 +56,20 @@ public class ReceiptPopulator {
             itemStock.put(ID, newAmount);
         }
 
+        public void updateInventory(HashMap<Integer, Item> inventory) {
+            for(Integer ID : itemStock.keySet()) {
+                inventory.get(ID).quantity += itemStock.get(ID);
+            }
+        }
+
         public String toSQL() {
             String commands = "";
-            for(Integer ID: itemStock.keySet()){
+            for(Integer ID : itemStock.keySet()) {
                 String lineSQL = String.format(LINE_FMT, orderID, ID, itemStock.get(ID));
                 commands += lineSQL + "\n";
             }
 
-            commands+= String.format(ORDER_FMT, orderID, cost, year, month, day, "true");
+            commands += String.format(ORDER_FMT, orderID, cost, year, month, day, "true");
 
             return commands;
         }
@@ -126,7 +138,10 @@ public class ReceiptPopulator {
 
         HashMap<Integer, Item> inventory = readFromCSV("items.csv");
 
+        Order myOrder = new Order(1, 2022, 2, 5);
+        myOrder.addItem(6, 56.78, inventory);
 
+        System.out.println(myOrder.toSQL());
 
     }
 }

@@ -132,7 +132,7 @@ public class ReceiptPopulator {
         public void fillRandom(Random rnd, HashMap<Integer, Item> inventory, int amount) {
             Set<Integer> bought = new HashSet<Integer>();
 
-            for (int i = 0; i < amount; i++) {
+            for (int i = 1; i < amount + 1; i++) {
                 // Get ID, check if already bought
                 int ID = 1 + rnd.nextInt(inventory.size());
                 if (bought.contains(ID)) continue;
@@ -237,27 +237,36 @@ public class ReceiptPopulator {
         HashMap<Integer, Item> inventory = readFromCSV("items.csv");
         HashMap<Integer, String> employees = readEmployees("employees.txt");
 
-        // Create order
-        Order myOrder = new Order(1, 2022, 2, 5);
-        for (int i = 1; i < inventory.size() + 1; i++) {
-            double quantity = 5 + rnd.nextDouble() * 20;
-            if (!inventory.get(i).byWeight) quantity = Math.round(quantity);
-            myOrder.addItem(i, quantity, inventory);
+        int receipt_id = 1;
+
+        for (int day = 1; day < 22; day++) {
+            // Create order
+            Order myOrder = new Order(1, 2022, 6, day);
+            for (int i = 1; i < inventory.size() + 1; i++) {
+                if (inventory.get(i).quantity > 2.5) continue;
+
+                double quantity = 5 + rnd.nextDouble() * 20;
+                if (!inventory.get(i).byWeight) quantity = Math.round(quantity);
+                myOrder.addItem(i, quantity, inventory);
+            }
+
+            // Print SQL
+            System.out.print(myOrder.toSQL());
+
+            // Finalize order
+            myOrder.updateInventory(inventory);
+            
+            // Create random receipts
+            int receipts = 30 + rnd.nextInt(50);
+            if (day == 6 || day == 13) receipts = 500 + rnd.nextInt(1500);
+            for (int i = 0; i < receipts; i++) {
+                Receipt receipt = new Receipt(receipt_id++, rnd.nextInt(employees.size()) + 1, rnd.nextBoolean(), 2022, 6, day);
+                receipt.fillRandom(rnd, inventory, 2 + rnd.nextInt(8));
+
+                System.out.println(receipt.toSQL());
+            }
         }
 
-        // Finalize order
-        myOrder.updateInventory(inventory);
-        
-        // Create random receipts
-        for (int i = 0; i < 20; i++) {
-            Receipt receipt = new Receipt(i, 3, false, 2022, 6, 9);
-            receipt.fillRandom(rnd, inventory, 5);
-
-            System.out.println(receipt.toSQL());
-        }
-
-        // Print SQL
-        System.out.print(myOrder.toSQL());
         for (Item item : inventory.values()) {
             System.out.print(item.toSQL());
         }

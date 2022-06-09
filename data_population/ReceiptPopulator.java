@@ -1,28 +1,30 @@
-import java.net.FileNameMap;
 import java.util.*;
 import java.io.*;
 
 public class ReceiptPopulator {
 
     static class Item {
+        public int ID;
         public boolean byWeight;
         public String displayName;
         public double unitPrice;
         public double quantity;
 
-        private final String ITEM_FMT = "UPDATE items SET quantity = %.3f WHERE id = %d;"; 
+        private final String ITEM_FMT = "UPDATE items SET quantity = %.3f WHERE id = %d;\n"; 
 
-        public Item(boolean isCash, String displayName, double unitPrice, double quantity) {
-            this.byWeight = isCash;
+        public Item(int ID, boolean byWeight, String displayName, double unitPrice, double quantity) {
+            this.ID = ID;
+            this.byWeight = byWeight;
             this.displayName = displayName;
             this.unitPrice = unitPrice;
             this.quantity = quantity;
         }
 
         public String toSQL() {
-            return String.format(ITEM_FMT, quantity)
+            return String.format(ITEM_FMT, quantity, ID);
         }
     }
+
 
     static class Order {
         public int orderID;
@@ -30,8 +32,8 @@ public class ReceiptPopulator {
         public HashMap<Integer, Double> itemStock;
         public int year, month, day;
 
-        private final String LINE_FMT = "INSERT INTO order_lines VALUES (%d, %d, %.3f);";
-        private final String ORDER_FMT = "INSERT INTO orders VALUES (%d, %.2f, '%04d-%02d-%02d', %s);";
+        private final String LINE_FMT = "INSERT INTO order_lines VALUES (%d, %d, %.3f);\n";
+        private final String ORDER_FMT = "INSERT INTO orders VALUES (%d, %.2f, '%04d-%02d-%02d', %s);\n";
 
         public Order(int orderID, int year, int month, int day) {
             this.orderID = orderID;
@@ -41,6 +43,14 @@ public class ReceiptPopulator {
             this.month = month;
             this.day = day;
         }
+
+        // public void printDebug(HashMap<Integer, Item> inventory) {
+        //     System.out.println(String.format("Order %d:", orderID));
+        //     for (Integer key : itemStock.keySet()) {
+        //         Item item = inventory.get(key);
+        //         System.out.println(String.format("* %-12.12s | %7.03f %s | %2.02f EUR", item.displayName, itemStock.get(key), item.byWeight ? "kg" : "  ", item.unitPrice * itemStock.get(key)));
+        //     }
+        // }
 
         public boolean hasOrdered(int ID) {
             return itemStock.containsKey(ID);
@@ -57,16 +67,16 @@ public class ReceiptPopulator {
         }
 
         public void updateInventory(HashMap<Integer, Item> inventory) {
-            for(Integer ID : itemStock.keySet()) {
+            for (Integer ID : itemStock.keySet()) {
                 inventory.get(ID).quantity += itemStock.get(ID);
             }
         }
 
         public String toSQL() {
             String commands = "";
-            for(Integer ID : itemStock.keySet()) {
+            for (Integer ID : itemStock.keySet()) {
                 String lineSQL = String.format(LINE_FMT, orderID, ID, itemStock.get(ID));
-                commands += lineSQL + "\n";
+                commands += lineSQL;
             }
 
             commands += String.format(ORDER_FMT, orderID, cost, year, month, day, "true");
@@ -75,7 +85,78 @@ public class ReceiptPopulator {
         }
     }
 
-    private static Item readLine(String line) {
+
+    static class Receipt {
+        public int receiptID;
+        public int employeeID;
+        public boolean isCash;
+        public double total;
+        public HashMap<Integer, Double> itemStock;
+        public int year, month, day;
+
+        private final String LINE_FMT = "INSERT INTO receipt_lines VALUES (%d, %d, %.3f);\n";
+        private final String RECEIPT_FMT = "INSERT INTO receipts VALUES (%d, '%04d-%02d-%02d', %.2f, %s, %d);\n";
+
+        public Receipt(int receiptID, int employeeID, boolean isCash, int year, int month, int day) {
+            this.receiptID = receiptID;
+            this.employeeID = employeeID;
+            this.isCash = isCash;
+            this.total = 0;
+            this.itemStock = new HashMap<>();
+            this.year = year;
+            this.month = month;
+            this.day = day;
+        }
+
+        public void buyItem(int ID, double toBuy, HashMap<Integer, Item> inventory) {
+            if (inventory.get(ID).quantity < toBuy) return;
+
+            total += toBuy * inventory.get(ID).unitPrice;
+            itemStock.put(ID, toBuy);
+            inventory.get(ID).quantity -= toBuy;
+        }
+
+        public String toSQL() {
+            String commands = "";
+            for (Integer ID : itemStock.keySet()) {
+                String lineSQL = String.format(LINE_FMT, receiptID, ID, itemStock.get(ID));
+                commands += lineSQL;
+            }
+
+            String cashStr = isCash ? "true" : "false";
+            commands += String.format(RECEIPT_FMT, receiptID, year, month, day, total, cashStr, employeeID);
+
+            return commands;
+        }
+
+        public void fillRandom(Random rnd, HashMap<Integer, Item> inventory, int amount) {
+            Set<Integer> bought = new HashSet<Integer>();
+
+            for (int i = 0; i < amount; i++) {
+                // Get ID, check if already bought
+                int ID = 1 + rnd.nextInt(inventory.size());
+                if (bought.contains(ID)) continue;
+
+                // Add item to bought, get item
+                bought.add(ID);
+                Item item = inventory.get(ID);
+
+                // Generate quantity
+                double quantity = 0.01 + rnd.nextDouble() * 2.5;
+
+                // Check for by weight
+                if (!item.byWeight) {
+                    quantity = Math.ceil(quantity);
+                }
+
+                // Add item
+                buyItem(ID, quantity, inventory);
+            }
+        }
+    }
+
+    
+    private static Item readLine(int ID, String line) {
         Scanner sc = new Scanner(line);
         sc.useDelimiter(",");
         String displayName = sc.next();
@@ -83,7 +164,7 @@ public class ReceiptPopulator {
         boolean byWeight = sc.nextInt() == 1;
         sc.close();
 
-        Item tempItem = new Item(byWeight, displayName, unitPrice, 0);
+        Item tempItem = new Item(ID, byWeight, displayName, unitPrice, 0);
 
         return tempItem;
     }
@@ -95,7 +176,7 @@ public class ReceiptPopulator {
         sc.useDelimiter("\n");
         int index = 1;
         while (sc.hasNext()) {
-            inventory.put(index, readLine(sc.nextLine()));
+            inventory.put(index, readLine(index, sc.nextLine()));
             index++;
         }
         sc.close();
@@ -103,7 +184,22 @@ public class ReceiptPopulator {
         return inventory;
     }
 
-    public static void main(String[] args) throws FileNotFoundException{
+    private static HashMap<Integer, String> readEmployees(String fileName) throws FileNotFoundException {
+        HashMap<Integer, String> employees = new HashMap<>();
+
+        Scanner sc = new Scanner(new File(fileName));
+        sc.useDelimiter("\n");
+        int index = 1;
+        while (sc.hasNext()) {
+            employees.put(index, sc.nextLine());
+            index++;
+        }
+        sc.close();
+        
+        return employees;
+    }
+
+    public static void main(String[] args) throws FileNotFoundException {
         // import random
 
         // random.seed(0xDEADBEEF)
@@ -131,17 +227,43 @@ public class ReceiptPopulator {
         //     script += "INSERT INTO receipt_lines VALUES ({}, {}, {:0.3f});\n".format(this_receipt_id, random.choice(items), random.random() * 25)
         // script += "INSERT INTO receipts (id, transaction_date, total, is_cash, employee_id) VALUES ({}, '2022-{:02d}-{:02d}', {:0.2f}, {}, 1);\n".format(this_receipt_id, month, day, random.random() * 100, random.choice(["true", "false"]))
         // print(script)
-        long seed = 0xDEADBEEF;
 
+        // Seed random generator (for later)
+        long seed = 0xDEADBEEF;
         Random rnd = new Random();
         rnd.setSeed(seed);
 
+        // Create inventory/employee reference
         HashMap<Integer, Item> inventory = readFromCSV("items.csv");
+        HashMap<Integer, String> employees = readEmployees("employees.txt");
 
+        // Create order
         Order myOrder = new Order(1, 2022, 2, 5);
-        myOrder.addItem(6, 56.78, inventory);
+        for (int i = 1; i < inventory.size() + 1; i++) {
+            double quantity = 5 + rnd.nextDouble() * 20;
+            if (!inventory.get(i).byWeight) quantity = Math.round(quantity);
+            myOrder.addItem(i, quantity, inventory);
+        }
 
-        System.out.println(myOrder.toSQL());
+        // Finalize order
+        myOrder.updateInventory(inventory);
+        
+        // Create random receipts
+        for (int i = 0; i < 20; i++) {
+            Receipt receipt = new Receipt(1, 3, false, 2022, 6, 9);
+            receipt.fillRandom(rnd, inventory, 5);
 
+            System.out.println(receipt.toSQL());
+        }
+
+        // Print SQL
+        System.out.print(myOrder.toSQL());
+        for (Item item : inventory.values()) {
+            System.out.print(item.toSQL());
+        }
+
+        // // Print order
+        // System.out.println();
+        // myOrder.printDebug(inventory);
     }
 }

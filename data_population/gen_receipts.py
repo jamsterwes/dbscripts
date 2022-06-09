@@ -9,12 +9,12 @@ with open("employees.txt") as employee_file:
 
 # temporary
 last_receipt_id = 1
-
+v
 script = ""
 items = list(range(1,54))
 holidays = [6, 13]
 month = 2
-for day in range(1, 30):
+for day in range(1, 22):
     transaction_count = random.randrange(5, 10)
     if day in holidays:
         transaction_count = random.randrange(50, 100)
